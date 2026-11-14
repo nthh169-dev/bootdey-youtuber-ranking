@@ -423,11 +423,15 @@ if (typeof window !== 'undefined') {
 
 function formatSubscribersCount(num) {
     const n = Number(num || 0);
+    if (n <= 0) return '0';
+    if (n >= 1000000000) {
+        return Number((n / 1000000000).toFixed(2)).toString() + 'B';
+    }
     if (n >= 1000000) {
-        return (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1).replace(/\.0$/, '') + 'M';
+        return Number((n / 1000000).toFixed(2)).toString() + 'M';
     }
     if (n >= 1000) {
-        return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1).replace(/\.0$/, '') + 'K';
+        return Number((n / 1000).toFixed(1)).toString() + 'K';
     }
     return String(n);
 }
@@ -504,6 +508,86 @@ async function fetchChannelsFromSupabase() {
     }
 }
 
+// Hàm tự động lấy số liệu mới nhất từ YouTube Data API v3 (theo youtube.txt) và cập nhật 4 cột trên Supabase:
+// subscribers, subscribers_formatted, videos_count, view_count
+async function syncYouTubeToSupabase(targetChannelId) {
+    try {
+        const ytConfig = (typeof window !== 'undefined' && window.YOUTUBE_CONFIG) || {
+            endpoint: 'https://www.googleapis.com/youtube/v3/channels',
+            parts: 'snippet,statistics,contentDetails',
+            apiKey: 'AIzaSyCoccJ_YSStOgdLxct49Td3PA9z6e4aJ_A'
+        };
+
+        // Cách 1: Gọi trực tiếp Supabase RPC `sync_youtube_channels_stats` (Database tự gọi YouTube API và cập nhật)
+        const rpcEndpoint = SUPABASE_CONFIG.url + '/rest/v1/rpc/sync_youtube_channels_stats';
+        const rpcRes = await fetch(rpcEndpoint, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_CONFIG.publishableKey,
+                'Authorization': 'Bearer ' + SUPABASE_CONFIG.publishableKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ p_channel_id: targetChannelId || null })
+        });
+
+        if (rpcRes.ok) {
+            const rpcData = await rpcRes.json();
+            const refreshed = await fetchChannelsFromSupabase();
+            return {
+                success: true,
+                updated_count: rpcData.updated_count || refreshed.count,
+                synced_at: rpcData.synced_at || new Date().toISOString(),
+                data: refreshed.data
+            };
+        }
+
+        // Cách 2 (Dự phòng): Trình duyệt gọi YouTube Data API v3 rồi đẩy vào RPC `update_channels_youtube_stats`
+        const targetList = targetChannelId
+            ? CHANNELS_DATA.filter(function (c) { return c.id === targetChannelId; })
+            : CHANNELS_DATA;
+        const idsCsv = targetList.map(function (c) { return c.id; }).join(',');
+        const ytUrl = ytConfig.endpoint + '?part=' + ytConfig.parts + '&id=' + encodeURIComponent(idsCsv) + '&key=' + encodeURIComponent(ytConfig.apiKey);
+        const ytRes = await fetch(ytUrl);
+        if (!ytRes.ok) {
+            throw new Error('YouTube API HTTP Error: ' + ytRes.status);
+        }
+        const ytJson = await ytRes.json();
+        const updates = (ytJson.items || []).map(function (item) {
+            const stats = item.statistics || {};
+            const subs = Number(stats.subscriberCount || 0);
+            return {
+                id: item.id,
+                subscribers: subs,
+                subscribers_formatted: formatSubscribersCount(subs),
+                videos_count: Number(stats.videoCount || 0),
+                view_count: Number(stats.viewCount || 0)
+            };
+        });
+
+        await fetch(SUPABASE_CONFIG.url + '/rest/v1/rpc/update_channels_youtube_stats', {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_CONFIG.publishableKey,
+                'Authorization': 'Bearer ' + SUPABASE_CONFIG.publishableKey,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ p_items: updates })
+        });
+
+        const refreshed = await fetchChannelsFromSupabase();
+        return {
+            success: true,
+            updated_count: updates.length,
+            synced_at: new Date().toISOString(),
+            data: refreshed.data
+        };
+    } catch (err) {
+        console.error('Lỗi khi đồng bộ từ YouTube API sang Supabase:', err);
+        return { success: false, updated_count: 0, error: err.message || String(err) };
+    }
+}
+
 if (typeof window !== 'undefined') {
     window.fetchChannelsFromSupabase = fetchChannelsFromSupabase;
+    window.syncYouTubeToSupabase = syncYouTubeToSupabase;
 }

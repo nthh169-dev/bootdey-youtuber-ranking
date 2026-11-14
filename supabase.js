@@ -5,10 +5,18 @@ var SUPABASE_CONFIG = {
     table: 'channels'
 };
 
+// Cấu hình YouTube Data API v3 (đồng bộ từ file youtube.txt)
+var YOUTUBE_CONFIG = {
+    endpoint: 'https://www.googleapis.com/youtube/v3/channels',
+    parts: 'snippet,statistics,contentDetails',
+    apiKey: 'AIzaSyCoccJ_YSStOgdLxct49Td3PA9z6e4aJ_A'
+};
+
 // Khởi tạo Supabase Client từ @supabase/supabase-js CDN
 var supabaseClient = null;
 if (typeof window !== 'undefined') {
     window.SUPABASE_CONFIG = SUPABASE_CONFIG;
+    window.YOUTUBE_CONFIG = YOUTUBE_CONFIG;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
         supabaseClient = window.supabase.createClient(
             SUPABASE_CONFIG.url,

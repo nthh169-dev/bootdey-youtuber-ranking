@@ -186,3 +186,27 @@ BEGIN
     END IF;
 END
 $$;
+
+-- Bật extension http và tạo hàm RPC tự động cập nhật subscribers, subscribers_formatted, videos_count, view_count từ YouTube API
+CREATE EXTENSION IF NOT EXISTS http WITH SCHEMA extensions;
+
+CREATE OR REPLACE FUNCTION public.format_subscribers_count(p_subs bigint)
+RETURNS varchar
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF p_subs IS NULL OR p_subs <= 0 THEN
+        RETURN '0';
+    ELSIF p_subs >= 1000000000 THEN
+        RETURN trim_scale(round(p_subs::numeric / 1000000000.0, 2))::text || 'B';
+    ELSIF p_subs >= 1000000 THEN
+        RETURN trim_scale(round(p_subs::numeric / 1000000000.0 * 1000.0, 2))::text || 'M';
+    ELSIF p_subs >= 1000 THEN
+        RETURN trim_scale(round(p_subs::numeric / 1000.0, 1))::text || 'K';
+    ELSE
+        RETURN p_subs::text;
+    END IF;
+END;
+$$;

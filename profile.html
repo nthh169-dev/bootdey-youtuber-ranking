@@ -70,9 +70,14 @@
                     <div class="col-lg-8">
                         <div class="card">
                             <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
                                     <h5 class="mb-0 text-primary"><i class="fa fa-database"></i> Thông tin kênh (Bảng <code>channels</code> Supabase)</h5>
-                                    <span id="supabase-status-badge" class="badge badge-secondary"><i class="fa fa-spinner fa-spin"></i> Đang kết nối Supabase...</span>
+                                    <div>
+                                        <span id="supabase-status-badge" class="badge badge-secondary"><i class="fa fa-spinner fa-spin"></i> Đang kết nối Supabase...</span>
+                                        <button type="button" id="btn-sync-youtube-profile" class="btn btn-sm btn-danger ml-2" title="Tự động cập nhật từ YouTube API">
+                                            <i class="fa fa-youtube-play"></i> Đồng bộ YouTube API
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="row mb-3">
                                     <div class="col-sm-3">
@@ -120,6 +125,14 @@
                                     </div>
                                     <div class="col-sm-9 text-secondary">
                                         <input type="text" class="form-control" id="input-videos" readonly>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-sm-3">
+                                        <h6 class="mb-0">Tổng lượt xem (Views)</h6>
+                                    </div>
+                                    <div class="col-sm-9 text-secondary">
+                                        <input type="text" class="form-control font-weight-bold text-primary" id="input-views" readonly>
                                     </div>
                                 </div>
                                 <div class="row mb-3">
@@ -294,6 +307,9 @@
                     document.getElementById('input-category').value = ch.category;
                     document.getElementById('input-subscribers').value = ch.subscribers_formatted + ' (' + (ch.subscribers || 0).toLocaleString() + ' người đăng ký)';
                     document.getElementById('input-videos').value = (ch.videos_count || 0).toLocaleString() + ' videos';
+                    if (document.getElementById('input-views')) {
+                        document.getElementById('input-views').value = (ch.view_count || 0).toLocaleString() + ' lượt xem';
+                    }
                     document.getElementById('input-description').value = ch.description || 'Chưa có mô tả chi tiết trong SQL.';
 
                     // Mạng xã hội
@@ -364,6 +380,29 @@
                                 statusBadge.title = result.error || '';
                             }
                         }
+                    });
+                }
+
+                const syncProfileBtn = document.getElementById('btn-sync-youtube-profile');
+                if (syncProfileBtn && typeof window.syncYouTubeToSupabase === 'function') {
+                    syncProfileBtn.addEventListener('click', function () {
+                        const currentId = document.getElementById('quick-channel-select').value;
+                        const statusBadge = document.getElementById('supabase-status-badge');
+                        syncProfileBtn.disabled = true;
+                        syncProfileBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang đồng bộ...';
+
+                        window.syncYouTubeToSupabase(currentId).then(function (res) {
+                            syncProfileBtn.disabled = false;
+                            syncProfileBtn.innerHTML = '<i class="fa fa-youtube-play"></i> Đồng bộ YouTube API';
+                            refreshSortedList();
+                            populateSelect(currentId);
+                            renderProfile(currentId);
+
+                            if (statusBadge && res.success) {
+                                statusBadge.className = 'badge badge-success';
+                                statusBadge.innerHTML = '<i class="fa fa-check-circle"></i> Đã cập nhật từ YouTube API';
+                            }
+                        });
                     });
                 }
             })();

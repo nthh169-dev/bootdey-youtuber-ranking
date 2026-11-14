@@ -23,6 +23,9 @@
                         <p id="channel-summary-text">
                             Phân trang, mỗi trang 50 kênh &bull; Hiển thị <strong id="total-count">21</strong> kênh từ bảng <code>channels</code> &bull;
                             <span id="supabase-status-badge" class="badge badge-secondary"><i class="fa fa-spinner fa-spin"></i> Đang kết nối Supabase...</span>
+                            <button type="button" id="btn-sync-youtube" class="btn btn-sm btn-danger ml-2" title="Tự động cập nhật subscribers, subscribers_formatted, videos_count, view_count từ YouTube API">
+                                <i class="fa fa-youtube-play"></i> Cập nhật từ YouTube API
+                            </button>
                         </p>
                     </div>
                 </div>
@@ -609,7 +612,7 @@
                                             renderSocialLinks(ch) +
                                         '</div>' +
                                         '<div class="time">' +
-                                            '<span><i class="fa fa-video-camera"></i> ' + (ch.videos_count || 0).toLocaleString() + ' videos &bull; <small class="text-muted">ID: ' + ch.id + '</small></span>' +
+                                            '<span><i class="fa fa-video-camera"></i> ' + (ch.videos_count || 0).toLocaleString() + ' videos &bull; <i class="fa fa-eye"></i> ' + (ch.view_count || 0).toLocaleString() + ' views &bull; <small class="text-muted">ID: ' + ch.id + '</small></span>' +
                                         '</div>' +
                                     '</div>' +
                                 '</div>' +
@@ -687,6 +690,28 @@
                             statusBadge.title = result.error || '';
                         }
                     }
+                });
+            }
+
+            const syncBtn = document.getElementById('btn-sync-youtube');
+            if (syncBtn && typeof window.syncYouTubeToSupabase === 'function') {
+                syncBtn.addEventListener('click', function () {
+                    const statusBadge = document.getElementById('supabase-status-badge');
+                    syncBtn.disabled = true;
+                    syncBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Đang đồng bộ YouTube API...';
+
+                    window.syncYouTubeToSupabase().then(function (res) {
+                        syncBtn.disabled = false;
+                        syncBtn.innerHTML = '<i class="fa fa-youtube-play"></i> Cập nhật từ YouTube API';
+                        const currentCat = document.getElementById('channel-category').value || 'ALL';
+                        renderGroupCategories(currentCat);
+                        applyFiltersAndRender();
+
+                        if (statusBadge && res.success) {
+                            statusBadge.className = 'badge badge-success';
+                            statusBadge.innerHTML = '<i class="fa fa-check-circle"></i> Đã cập nhật từ YouTube API (' + res.updated_count + ' kênh)';
+                        }
+                    });
                 });
             }
         })();
