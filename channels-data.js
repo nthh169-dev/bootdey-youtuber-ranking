@@ -1,5 +1,5 @@
-// Cấu hình kết nối Supabase (từ supabase.txt)
-const SUPABASE_CONFIG = {
+// Cấu hình kết nối Supabase (được nạp từ supabase.js / supabase.txt)
+var SUPABASE_CONFIG = (typeof window !== 'undefined' && window.SUPABASE_CONFIG) || {
     url: 'https://qhkdldltwqnwpmifqdcj.supabase.co',
     publishableKey: 'sb_publishable_th6ALyrrhz5qWwppeBOlRw_ouLOX2CU',
     table: 'channels'
@@ -411,11 +411,11 @@ const FALLBACK_CHANNELS_DATA = [
 // Biến dữ liệu chính dùng cho giao diện (mặc định khởi tạo bằng fallback trước khi đồng bộ từ Supabase)
 let CHANNELS_DATA = FALLBACK_CHANNELS_DATA.slice();
 
-// Khởi tạo Supabase Client nếu thư viện @supabase/supabase-js đã được nạp
-let supabaseClient = null;
+// Khởi tạo hoặc sử dụng Supabase Client từ supabase.js
+var supabaseClient = (typeof window !== 'undefined' && window.supabaseClient) || null;
 if (typeof window !== 'undefined') {
     window.SUPABASE_CONFIG = SUPABASE_CONFIG;
-    if (window.supabase && typeof window.supabase.createClient === 'function') {
+    if (!supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
         supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.publishableKey);
         window.supabaseClient = supabaseClient;
     }

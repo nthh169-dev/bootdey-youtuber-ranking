@@ -1,0 +1,3 @@
+https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&id=UCX6OQ3DkcsbYNE6H8uQQuVA&key=AIzaSyCoccJ_YSStOgdLxct49Td3PA9z6e4aJ_A
+
+API_KEY=AIzaSyCoccJ_YSStOgdLxct49Td3PA9z6e4aJ_A

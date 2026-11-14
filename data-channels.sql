@@ -164,3 +164,25 @@ INSERT INTO channels (
 	NULL
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- Bật Row Level Security (RLS) và cấp quyền đọc công khai (SELECT) cho bảng channels trên Supabase
+ALTER TABLE public.channels ENABLE ROW LEVEL SECURITY;
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT ON TABLE public.channels TO anon, authenticated;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+          AND tablename = 'channels' 
+          AND policyname = 'Allow public read access on channels'
+    ) THEN
+        CREATE POLICY "Allow public read access on channels"
+        ON public.channels
+        FOR SELECT
+        TO anon, authenticated
+        USING (true);
+    END IF;
+END
+$$;
