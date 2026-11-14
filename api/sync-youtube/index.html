@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <title>API Sync YouTube -> Supabase</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            margin: 0;
+            padding: 16px;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: Consolas, Monaco, 'Courier New', monospace;
+            font-size: 14px;
+        }
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <pre id="json-output">{
+  "status": "syncing",
+  "message": "Đang lấy dữ liệu từ YouTube Data API v3 và cập nhật vào bảng channels trên Supabase..."
+}</pre>
+    <script src="../../supabase.js"></script>
+    <script src="../../channels-data.js"></script>
+    <script>
+        (async function () {
+            const output = document.getElementById('json-output');
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const targetId = params.get('id') || null;
+                const res = await window.syncYouTubeToSupabase(targetId);
+                const payload = {
+                    success: res.success,
+                    updated_count: res.updated_count,
+                    synced_at: res.synced_at,
+                    updated_columns: [
+                        'subscribers',
+                        'subscribers_formatted',
+                        'videos_count',
+                        'view_count'
+                    ],
+                    channels: (res.data || []).map(function (c) {
+                        return {
+                            id: c.id,
+                            name: c.name,
+                            subscribers: c.subscribers,
+                            subscribers_formatted: c.subscribers_formatted,
+                            videos_count: c.videos_count,
+                            view_count: c.view_count
+                        };
+                    })
+                };
+                output.textContent = JSON.stringify(payload, null, 2);
+            } catch (err) {
+                output.textContent = JSON.stringify({
+                    success: false,
+                    error: err.message || String(err)
+                }, null, 2);
+            }
+        })();
+    </script>
+</body>
+</html>

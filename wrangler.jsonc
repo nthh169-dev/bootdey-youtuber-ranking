@@ -1,0 +1,12 @@
+{
+  "name": "bootdey-youtuber-ranking",
+  "compatibility_date": "2025-01-01",
+  "main": "worker.js",
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  }
+}
