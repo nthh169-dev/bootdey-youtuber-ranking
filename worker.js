@@ -185,5 +185,10 @@ export default {
         }
 
         return new Response('Not Found', { status: 404 });
+    },
+
+    // Hỗ trợ Cloudflare Cron Triggers tự động chạy ngầm
+    async scheduled(event, env, ctx) {
+        ctx.waitUntil(handleSyncYouTube(new URL('https://localhost/api/sync-youtube'), env));
     }
 };
